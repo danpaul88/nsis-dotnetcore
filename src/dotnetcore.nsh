@@ -206,10 +206,11 @@
 
 	DetailPrint "Downloading dotnet $R0 from $R1"
 
-	; Create destination file
+	; Create destination file for installer download. Suppressing details print to reduce noise in details log
 	GetTempFileName $R2
-	nsExec::Exec 'cmd.exe /c rename "$R2" "$R2.exe"'	; Not using Rename to avoid spam in details log
-	Pop $R3 ; Pop exit code
+	SetDetailsPrint none
+	Rename $R2 "$R2.exe"
+	SetDetailsPrint lastused		
 	StrCpy $R2 "$R2.exe"
 	
 	; Fetch runtime installer
@@ -236,8 +237,10 @@
 	ExecWait "$\"$R2$\" /install /quiet /norestart" $R1
 	DetailPrint "Installer completed (Result: $R1)"
 
-	nsExec::Exec 'cmd.exe /c del "$R2"'	; Not using Delete to avoid spam in details log
-	Pop $R3 ; Pop exit code
+	; Delete downloaded installer from disk. Suppressing details print to reduce noise in details log
+	SetDetailsPrint none
+	Delete $R2
+	SetDetailsPrint lastused
 
 	; Error checking? Verify install result?
 
@@ -287,22 +290,26 @@ Function DotNetCorePSExecFn
 	Push $R2
 
 	; Write the command into a temp file
-	; Note: Using GetTempFileName to get a temp file name, but since we need to have a .ps1 extension
-	; on the end we rename it with an extra file extension
+	; Note: Using GetTempFileName gets a temporary file name, but since we need to have a .ps1 extension on the end
+	; we rename it with an extra file extension. Suppressing details print to reduce noise in details log
 	GetTempFileName $R1
-	nsExec::Exec 'cmd.exe /c rename "$R1" "$R1.ps1"'	; Not using Rename to avoid spam in details log
-	Pop $R2 ; Pop exit code
+	SetDetailsPrint none
+	Rename $R1 "$R1.ps1"
+	SetDetailsPrint lastused
 	StrCpy $R1 "$R1.ps1"
 
 	FileOpen $R2 $R1 w
 	FileWrite $R2 $R0
 	FileClose $R2
 
-	; Execute the powershell script and delete the temp file
+	; Execute the powershell script
 	Push $R1
 	Call DotNetCorePSExecFileFn
-	nsExec::Exec 'cmd.exe /c del "$R1"'	; Not using Delete to avoid spam in details log
-	Pop $R0 ; Pop exit code
+
+	; Delete the temporary file containing the script. Suppressing details print to reduce noise in details log
+	SetDetailsPrint none
+	Delete $R1
+	SetDetailsPrint lastused
 
 	; Restore registers
 	Exch
